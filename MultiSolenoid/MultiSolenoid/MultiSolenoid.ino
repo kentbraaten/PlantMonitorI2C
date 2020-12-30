@@ -62,7 +62,7 @@ class MultiSolenoidState{
     //Serial.println("Waiting State ");
 
     if (cycles >= NUM_CYCLES){
-      digitalWrite(pinIdx + FIRST_PIN,LOW);
+      digitalWrite(cyclesPerPin[pinIdx],LOW);
       pinIdx++;
       cycles = 0;
       if (pinIdx == MAX_PIN_IDX || cyclesPerPin[pinIdx] == 0){
