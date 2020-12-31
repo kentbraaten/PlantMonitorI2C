@@ -59,7 +59,6 @@ class MultiSolenoidState{
 
   int processWaitingState() {
     cycles++;
-    //Serial.println("Waiting State ");
 
     if (cycles >= NUM_CYCLES){
       digitalWrite(cyclesPerPin[pinIdx],LOW);
@@ -74,6 +73,7 @@ class MultiSolenoidState{
   }
 
   int processTurnOffState() {
+    interrupts();
     return LOOPING;
   }
 
@@ -95,6 +95,7 @@ void setup() {
 void loop() {
   if (startNewCycle){
     startNewCycle = false;
+    noInterrupts();
     currentState->start(cyclesPerPin);
   }
   currentState->getNextState();
@@ -110,11 +111,7 @@ long byteArrayToInt(byte byteArray[]){
 }
 
 void receiveRequest(int howMany){
-  Serial.print("Processing ");
-  Serial.print(howMany);
-  Serial.println(" bytes");
   if (validNumberOfBytesSent(howMany)){
-    Serial.println("valid number of bytes sent");
     byte byteArray[4];
     resetPinArray();
     for (int i = 0; i != howMany; ++i){
@@ -123,8 +120,6 @@ void receiveRequest(int howMany){
         cyclesPerPin[i / 4] = byteArrayToInt(byteArray);
       }
     }
-    for (int i = 0; i != 4; ++i)
-      Serial.println(cyclesPerPin[i]);
     startNewCycle = true;
   } else {
     dumpBytes(howMany);
@@ -132,7 +127,6 @@ void receiveRequest(int howMany){
 }
 
 void processRequest() {
-    Serial.println("Processing request");
     Wire.write(0x01);
 }
 
