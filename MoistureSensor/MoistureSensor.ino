@@ -1,67 +1,47 @@
 #include <string.h>
 #include <Wire.h>
 
-const int moistureSensorPin = 0;
+long byteArrayToInt(byte byteArray[]);
+
 const int MIN_READING = 240;
 const int MAX_READING = 600;
 const double MAX_ADJUSTED_READING = MAX_READING - MIN_READING;
 
-byte lastLeaderCommand;
+volatile long sensorPin;
 
 void setup() {
   // put your setup code here, to run once:
   Wire.begin(4);
   Wire.onReceive(receiveCommand);
-  Wire.onRequest(followerRespond);
+  Wire.onRequest(doRequest);
   Serial.begin(9600);
 }
 
 void loop() {
-  //Serial.println(toStandardScale(getSensorReading()));
   delay(1);
 }
 
 void receiveCommand(int howMany){
-  lastLeaderCommand = Wire.read();
-  Serial.print("In receiveCommand -- ");
-  Serial.println(lastLeaderCommand);
+  byte byteArray[4];
+  if (howMany != 4){
+    dumpBytes(howMany);
+  } else {
+    for (int i = 0; i != 4; ++i){
+      byteArray[i] = Wire.read();
+    }
+  }
+  sensorPin = byteArrayToInt(byteArray);
 }
 
 void doRequest(){
-  long value = toStandardScale(getSensorReading());
-  Serial.println(value);
+  long value = toStandardScale(getSensorReading(sensorPin));
   unsigned char bytesToSend[4];
   copyValueToByteArray(value,bytesToSend);
-  Wire.write(value); 
+  Wire.write(bytesToSend,4); 
 }
 
-void followerRespond() {
-  long valueToSend = 0;
-  switch(lastLeaderCommand)
-  {
-    case 0x00: valueToSend = toStandardScale(getSensorReading());
-            break;
-
-    case 0x01: valueToSend = getSensorReading();
-            break;
-
-    case 0x02: valueToSend = isSensorWorking(getSensorReading()) ? 1 : 0;
-            break;
-  }
-  byte bytesToSend[4];
-  copyValueToByteArray(valueToSend,bytesToSend);
-  for (int i = 0; i != 4; ++i)
-    Serial.println(bytesToSend[i]);
-  Serial.println(valueToSend);
-  Wire.write(bytesToSend,4);  
-}
-
-long getSensorReading(){
-  return analogRead(moistureSensorPin);
-}
-
-bool isSensorWorking(int reading){
-  return reading >= MIN_READING && reading <= MAX_READING;
+long getSensorReading(long pin){
+  return analogRead(pin);
 }
 
 void copyValueToByteArray(long value, byte bytesToSend[]){
@@ -74,4 +54,18 @@ void copyValueToByteArray(long value, byte bytesToSend[]){
 
 int toStandardScale(int reading){
  return 100 - (((reading - MIN_READING) / MAX_ADJUSTED_READING) * 100);
+}
+
+long byteArrayToInt(byte byteArray[]){
+  int toInt = (uint32_t) byteArray[0] << 24;
+  toInt |=  (uint32_t) byteArray[1] << 16;
+  toInt |= (uint32_t) byteArray[2] << 8;
+  toInt |= (uint32_t) byteArray[3];
+  return toInt;
+}
+
+void dumpBytes(int howMany){
+  for (int i = 0; i != howMany; ++i){
+       Wire.read();
+    }
 }
